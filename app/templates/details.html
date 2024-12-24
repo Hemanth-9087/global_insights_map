@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center">Details for {{ weather.name }}</h2>
+    <p class="text-center text-muted">{{ country }}</p>
+
+
+    <div class="card mt-4">
+        <div class="card-header bg-primary text-white">
+            <h4>Weather Information</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <img src="https://openweathermap.org/img/wn/{{ weather.weather[0].icon }}@4x.png"
+                        alt="{{ weather.weather[0].description }}">
+                    <h5 class="mt-2">{{ weather.weather[0].main }}</h5>
+                    <p>{{ weather.weather[0].description }}</p>
+                </div>
+                <div class="col-md-8">
+                    <ul class="list-group">
+                        <li class="list-group-item">
+                            <b>Temperature:</b> {{ weather.main.temp }} K ({{ (weather.main.temp - 273.15) | round(2)
+                            }}°C)
+                        </li>
+                        <li class="list-group-item">
+                            <b>Feels Like:</b> {{ weather.main.feels_like }} K ({{ (weather.main.feels_like - 273.15) |
+                            round(2) }}°C)
+                        </li>
+                        <li class="list-group-item">
+                            <b>Humidity:</b> {{ weather.main.humidity }}%
+                        </li>
+                        <li class="list-group-item">
+                            <b>Pressure:</b> {{ weather.main.pressure }} hPa
+                        </li>
+                        <li class="list-group-item">
+                            <b>Visibility:</b> {{ weather.visibility / 1000 }} km
+                        </li>
+                        <li class="list-group-item">
+                            <b>Wind Speed:</b> {{ weather.wind.speed }} m/s
+                        </li>
+                        <li class="list-group-item">
+                            <b>Wind Direction:</b> {{ weather.wind.deg }}°
+                        </li>
+                        <li class="list-group-item">
+                            <b>Cloudiness:</b> {{ weather.clouds.all }}%
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information Card -->
+    <div class="card mt-4">
+        <div class="card-header bg-secondary text-white">
+            <h4>System Information</h4>
+        </div>
+        <div class="card-body">
+            <ul class="list-group">
+                <li class="list-group-item">
+                    <b>Country:</b> {{ country }}
+                </li>
+                <li class="list-group-item">
+                    <b>Sunrise:</b> {{ sunrise }}
+                </li>
+                <li class="list-group-item">
+                    <b>Sunset:</b> {{ sunset }}
+                </li>
+                <li class="list-group-item">
+                    <b>Time Zone:</b> UTC{{ weather.timezone / 3600 }} hours
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Population Information Card -->
+    {% if population %}
+    <div class="card mt-4">
+        <div class="card-header bg-success text-white">
+            <h4>Population Information</h4>
+        </div>
+        <div class="card-body">
+            {% if population.error %}
+            <p class="text-danger">{{ population.error }}</p>
+            {% else %}
+            <ul class="list-group">
+                <li class="list-group-item">
+                    <b>Population Today:</b> {{ population.population_today }}
+                </li>
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+/* static/css/style.css */
+#map {
+    border: 2px solid #ccc;
+    border-radius: 8px;
+}
+
+.leaflet-popup-content {
+    font-size: 14px;
+    line-height: 1.5;
+}

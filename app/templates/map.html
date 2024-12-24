@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5 text-center">
+    <h2>Welcome, {{ username }}!</h2>
+    <p>Explore the interactive map below:</p>
+    <div id="map" style="height: 600px; width: 100%; margin-bottom: 50px;"></div>
+</div>
+
+<!-- Include Leaflet -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Initialize the map
+       const map = L.map("map").setView([20, 0], 2);
+
+        // Add base map tiles
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 18,
+            attribution: "© OpenStreetMap",
+        }).addTo(map);
+
+        const api_Key = "{{ api_key }}";
+
+            // Define a custom icon
+        const favoriteIcon = L.icon({
+            iconUrl: "https://leafletjs.com/examples/custom-icons/leaf-green.png", // Replace with your custom icon URL
+            shadowUrl: "https://leafletjs.com/examples/custom-icons/leaf-shadow.png", // Shadow URL
+            iconSize: [38, 95], // Size of the icon
+            shadowSize: [50, 64], // Size of the shadow
+            iconAnchor: [22, 94], // Point of the icon which will correspond to marker's location
+            shadowAnchor: [4, 62], // The same for the shadow
+            popupAnchor: [-3, -76], // Point from which the popup should open relative to the iconAnchor
+        });
+
+        // Add markers for each favorite
+        const favorites1 = JSON.parse('{{ favorites | tojson | safe }}');
+
+
+        let marker; // Variable to hold the marker
+
+        async function fetchWeather(lat, lon) {
+            const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${api_Key}&units=metric`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data && data.main) {
+                    const iconUrl = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+                    return `
+                    <b>Location:</b> ${data.name}, ${data.sys.country}<br>
+                    <b>Weather:</b><br>
+                    <img src="${iconUrl}" alt="${data.weather[0].description}" style="vertical-align:middle;" />
+                    Temperature: ${data.main.temp}°C<br>
+                    Humidity: ${data.main.humidity}%<br>
+                    Condition: ${data.weather[0].description}
+                `;
+                } else {
+                    return "Weather data unavailable.";
+                }
+            } catch (error) {
+                console.error("Error fetching weather data:", error);
+                return "Failed to fetch weather data.";
+            }
+        }
+
+        function removeFavorite(marker, id) {
+            fetch("/favorites", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json"},
+                body: JSON.stringify({ id: id }),
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    alert(data.message || "Favorite removed successfully!");
+                    map.removeLayer(marker); // Remove marker from the map
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                    alert("Failed to remove favorite.");
+                });
+        }
+
+        favorites1.forEach(async (favorite) => {
+            const marker = L.marker([favorite.lat, favorite.lon], { icon: favoriteIcon }).addTo(map);
+
+            const weatherInfo = await fetchWeather(favorite.lat, favorite.lon);
+            marker.bindPopup(`
+            <b>${favorite.name}</b><br>
+            Latitude: ${favorite.lat}<br>
+            Longitude: ${favorite.lon}
+            ${weatherInfo}
+            <button id="removeFavorite-${favorite.id}" class="btn btn-danger btn-sm mt-2">
+                Remove Favorite
+            </button>
+            <a href="/details?lat=${favorite.lat}&lon=${favorite.lon}" class="btn btn-info btn-sm mt-2">
+            More Details
+            </a>
+          `);
+
+          marker.on("popupopen", () => {
+                document
+                    .getElementById(`removeFavorite-${favorite.id}`)
+                    .addEventListener("click", () => removeFavorite(marker, favorite.id));
+            });
+
+         });
+
+        // Check for query parameters from the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const lat = parseFloat(urlParams.get("lat"));
+        const lon = parseFloat(urlParams.get("lon"));
+
+        if (!isNaN(lat) && !isNaN(lon)) {
+            // If lat and lon exist, add a marker and center the map
+            marker = L.marker([lat, lon]).addTo(map)
+                .bindPopup(`
+                    <b>Favorite Location:</b><br>
+                    Latitude: ${lat}<br>
+                    Longitude: ${lon}
+                `)
+                .openPopup();
+            map.setView([lat, lon], 12); // Center the map at the given location
+        }
+
+        // Handle map clicks
+        map.on("click", async (e) => {
+            const clickedLat = e.latlng.lat.toFixed(4); // Latitude
+            const clickedLon = e.latlng.lng.toFixed(4); // Longitude
+
+            const weatherInfo = await fetchWeather(clickedLat, clickedLon);
+
+            // Remove any existing marker
+            if (marker) {
+                map.removeLayer(marker);
+            }
+
+            // Add a new marker at the clicked location
+            marker = L.marker([clickedLat, clickedLon]).addTo(map)
+                .bindPopup(`
+                <b>Selected Location:</b><br>
+                Latitude: ${clickedLat}<br>
+                Longitude: ${clickedLon}<br>
+                ${weatherInfo}
+                <button id="addToFavorites" class="btn btn-primary btn-sm mt-2">
+                    Add to Favorites
+                </button>
+                <a href="/details?lat=${clickedLat}&lon=${clickedLon}" class="btn btn-info btn-sm mt-2">
+                More Details
+                </a>
+            `)
+                .openPopup();
+
+            // Add event listener for the "Add to Favorites" button
+            setTimeout(() => {
+                document.getElementById("addToFavorites").addEventListener("click", () => {
+                    addToFavorites(clickedLat, clickedLon);
+                });
+            }, 100);
+        });
+
+        // Function to add location to favorites
+        function addToFavorites(lat, lon) {
+            const name = prompt("Enter a name for this favorite location:", "My Favorite Place");
+            if (!name) {
+                alert("Name is required to save the location.");
+                return;
+            }
+
+            fetch("/favorites", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: name,
+                    lat: parseFloat(lat),
+                    lon: parseFloat(lon),
+                }),
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.message) {
+                        alert(data.message || "Added to favorites successfully!");
+
+                        // Dynamically add the new marker
+                        const newMarker = L.marker([lat, lon], { icon: favoriteIcon }).addTo(map);
+                        newMarker.bindPopup(`
+                    <b>${name}</b><br>
+                    Latitude: ${lat}<br>
+                    Longitude: ${lon}
+                `);
+                    } else {
+                        alert("Failed to add location to favorites.");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                    alert("Failed to add location to favorites.");
+                });
+        }
+    });
+</script>
+{% endblock %}
