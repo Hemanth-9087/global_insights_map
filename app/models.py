@@ -8,8 +8,6 @@ class Favorite(db.Model):
     lon = db.Column(db.Float, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Link to User
 
-
-# Users Table (Optional if user login is included)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
