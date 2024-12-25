@@ -23,12 +23,12 @@
 
             // Define a custom icon
         const favoriteIcon = L.icon({
-            iconUrl: "https://leafletjs.com/examples/custom-icons/leaf-green.png", // Replace with your custom icon URL
+            iconUrl: "https://leafletjs.com/examples/custom-icons/leaf-green.png", 
             shadowUrl: "https://leafletjs.com/examples/custom-icons/leaf-shadow.png", // Shadow URL
-            iconSize: [38, 95], // Size of the icon
-            shadowSize: [50, 64], // Size of the shadow
+            iconSize: [38, 95], 
+            shadowSize: [50, 64], 
             iconAnchor: [22, 94], // Point of the icon which will correspond to marker's location
-            shadowAnchor: [4, 62], // The same for the shadow
+            shadowAnchor: [4, 62], 
             popupAnchor: [-3, -76], // Point from which the popup should open relative to the iconAnchor
         });
 
@@ -73,7 +73,7 @@
                 .then((response) => response.json())
                 .then((data) => {
                     alert(data.message || "Favorite removed successfully!");
-                    map.removeLayer(marker); // Remove marker from the map
+                    map.removeLayer(marker);
                 })
                 .catch((error) => {
                     console.error("Error:", error);
@@ -81,6 +81,7 @@
                 });
         }
 
+        //chatgpt helped me quite a bit here like dynamically adding the markers
         favorites1.forEach(async (favorite) => {
             const marker = L.marker([favorite.lat, favorite.lon], { icon: favoriteIcon }).addTo(map);
 
@@ -106,7 +107,7 @@
 
          });
 
-        // Check for query parameters from the URL
+
         const urlParams = new URLSearchParams(window.location.search);
         const lat = parseFloat(urlParams.get("lat"));
         const lon = parseFloat(urlParams.get("lon"));
@@ -125,8 +126,8 @@
 
         // Handle map clicks
         map.on("click", async (e) => {
-            const clickedLat = e.latlng.lat.toFixed(4); // Latitude
-            const clickedLon = e.latlng.lng.toFixed(4); // Longitude
+            const clickedLat = e.latlng.lat.toFixed(4); 
+            const clickedLon = e.latlng.lng.toFixed(4); 
 
             const weatherInfo = await fetchWeather(clickedLat, clickedLon);
 
@@ -151,7 +152,6 @@
             `)
                 .openPopup();
 
-            // Add event listener for the "Add to Favorites" button
             setTimeout(() => {
                 document.getElementById("addToFavorites").addEventListener("click", () => {
                     addToFavorites(clickedLat, clickedLon);
