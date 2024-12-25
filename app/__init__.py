@@ -5,7 +5,6 @@ import os
 from .utils import fetch_valid_countries
 
 
-# Initialize extensions
 db = SQLAlchemy()
 migrate = Migrate()
 
