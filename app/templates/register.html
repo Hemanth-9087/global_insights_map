@@ -21,23 +21,22 @@
 
 <script>
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
-        e.preventDefault(); // Prevent default form submission behavior
+        e.preventDefault(); 
 
-        // Prepare JSON payload
         const payload = {
             username: document.getElementById('username').value,
             email: document.getElementById('email').value,
             password: document.getElementById('password').value,
         };
 
-        // Send POST request
+
         const response = await fetch('/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
 
-        // Handle response
+
         const result = await response.json();
         if (response.ok) {
             alert(result.message);
