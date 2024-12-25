@@ -12,12 +12,10 @@
                 <br>Lat: {{ fav.lat }}, Lon: {{ fav.lon }}
             </div>
             <div>
-                <!-- Show Button -->
                 <a href="{{ url_for('routes.map_page') }}?lat={{ fav.lat }}&lon={{ fav.lon }}"
                     class="btn btn-info btn-sm">
                     Show
                 </a>
-                <!-- Delete Button -->
                 <form method="POST" action="{{ url_for('routes.delete_favorite') }}" style="display:inline;">
                     <input type="hidden" name="id" value="{{ fav.id }}">
                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>
