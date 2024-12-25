@@ -83,9 +83,6 @@ def logout():
     session.clear()
     return redirect(url_for("routes.homepage"))
 
-
-
-
 @routes.route("/favorites", methods=["GET", "POST", "DELETE"])
 @login_required
 def favorites():
