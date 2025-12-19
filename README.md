@@ -151,6 +151,3 @@ The project is organized into modular components to ensure clarity and maintaina
 
 ## Acknowledgments:
 Special thanks to all the open-source contributors whose work made this project possible. Additionally, I appreciate the support and guidance from CS50 and the broader programming community.
-
-ChatGPT by OpenAI. Assisted in API integration and debugging. 
-Available at: https://chatgpt.com/
