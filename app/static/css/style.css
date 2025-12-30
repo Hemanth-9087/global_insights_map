@@ -8,3 +8,14 @@
     font-size: 14px;
     line-height: 1.5;
 }
+
+.heart-icon span {
+    color: #333;
+    /* Heart outline color */
+    cursor: pointer;
+}
+
+.star-icon span {
+    color: gold;
+    /* Star color */
+}
