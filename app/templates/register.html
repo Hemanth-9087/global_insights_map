@@ -2,6 +2,7 @@
 {% block content %}
 <div class="container mt-5">
     <h2>Register</h2>
+    <div id="registerAlert" class="alert d-none" role="alert"></div>
     <form id="registerForm" method="POST" action="/register">
         <div class="form-group">
             <label for="username">Username</label>
@@ -20,6 +21,14 @@
 </div>
 
 <script>
+    const registerAlert = document.getElementById('registerAlert');
+
+    function showRegisterMessage(message, isError = false) {
+        registerAlert.textContent = message;
+        registerAlert.classList.remove('d-none', 'alert-success', 'alert-danger');
+        registerAlert.classList.add(isError ? 'alert-danger' : 'alert-success');
+    }
+
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
         e.preventDefault(); 
 
@@ -39,10 +48,10 @@
 
         const result = await response.json();
         if (response.ok) {
-            alert(result.message);
+            showRegisterMessage(result.message || 'Registration successful!');
             window.location.href = '/login'; // Redirect to login page
         } else {
-            alert(result.message || 'Registration failed');
+            showRegisterMessage(result.message || 'Registration failed', true);
         }
     });
 </script>

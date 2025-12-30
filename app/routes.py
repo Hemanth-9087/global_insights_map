@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, session, render_template, redirect, url_for
+from flask import Blueprint, jsonify, request, session, render_template, redirect, url_for, flash
 from .models import User,Favorite, db
 from .utils import login_required ,get_country_name ,get_population
 from . import db
@@ -45,13 +45,22 @@ def register_page():
 def register():
 
     data = request.json
+    username = (data.get("username") or "").strip()
+    email = (data.get("email") or "").strip()
+    password = (data.get("password") or "").strip()
+
+    if not username or not email or not password:
+        return jsonify({"message": "Username, email, and password are required."}), 400
+    if len(password) < 6:
+        return jsonify({"message": "Password must be at least 6 characters long."}), 400
+
     if User.query.filter_by(username=data["username"]).first():
         return jsonify({"message": "Username already exists"}), 400
     if User.query.filter_by(email=data["email"]).first():
         return jsonify({"message": "Email already registered"}), 400
 
-    new_user = User(username=data["username"], email=data["email"])
-    new_user.set_password(data["password"])
+    new_user = User(username=username, email=email)
+    new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
     return jsonify({"message": "User registered successfully"})
@@ -64,8 +73,8 @@ def login_page():
 @routes.route("/login", methods=["POST"])
 def login():
     data = request.json
-    username = data.get("username")
-    password = data.get("password")
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
 
     if not username or not password:
         return jsonify({"error": "Username and password are required"}), 400
