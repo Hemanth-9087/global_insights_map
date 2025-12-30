@@ -1,49 +1,53 @@
 from flask import Blueprint, jsonify, request, session, render_template, redirect, url_for, flash
 from .models import User,Favorite, db
-from .utils import login_required ,get_country_name ,get_population
+from .utils import get_weather, get_population, get_coordinates_openweather,get_air_pollution,login_required
 from . import db
-from config import API_KEYS
-import requests
-from datetime import datetime
-
-def format_timestamp(timestamp):
-    return datetime.utcfromtimestamp(timestamp).strftime('%H:%M:%S')
 
 routes = Blueprint("routes", __name__)
 favorites = []
 
 @routes.route("/")
 def homepage():
-
+    # Check if the user is logged in
     if "user_id" in session:
-        return redirect(url_for("routes.map_page"))  
-    return render_template("index.html")  
+        return redirect(url_for("routes.map_page"))  # Redirect to map page
+    return render_template("index.html")  # Serve the landing page
 
 @routes.route("/map", methods=["GET"])
 @login_required
 def map_page():
+    # Get latitude and longitude from query parameters (if any)
+    lat = request.args.get("lat", default=None, type=float)
+    lon = request.args.get("lon", default=None, type=float)
+    return render_template("map.html", lat=lat, lon=lon)
 
+
+@routes.route("/map")
+@login_required
+def map_view():
     user_id = session.get("user_id")
+
+    # Fetch all favorite locations for the logged-in user
     user_favorites = Favorite.query.filter_by(user_id=user_id).all()
 
+    # Convert to a list of dictionaries
     favorites_list = [
-        {"name": fav.name, "lat": fav.lat, "lon": fav.lon,"id": fav.id} 
+        {"name": fav.name, "lat": fav.lat, "lon": fav.lon} 
         for fav in user_favorites
     ]
 
-    lat = request.args.get("lat", default=None, type=float)
-    lon = request.args.get("lon", default=None, type=float)
-    return render_template("map.html", api_key=API_KEYS["weather"],lat=lat, lon=lon,favorites=favorites_list,username=session.get("username"))
+    return render_template("map.html", favorites=favorites_list,username=session.get("username"))
+
 
 
 @routes.route("/register", methods=["GET"])
 def register_page():
-
+    # Render the registration form (HTML page)
     return render_template("register.html")
 
 @routes.route("/register", methods=["POST"])
 def register():
-
+    # Handle the form submission for registration
     data = request.json
     username = (data.get("username") or "").strip()
     email = (data.get("email") or "").strip()
@@ -72,6 +76,9 @@ def login_page():
 
 @routes.route("/login", methods=["POST"])
 def login():
+    """
+    Authenticate a user and start a session.
+    """
     data = request.json
     username = (data.get("username") or "").strip()
     password = (data.get("password") or "").strip()
@@ -83,14 +90,57 @@ def login():
     if user and user.check_password(password):
         session["user_id"] = user.id
         session["username"] = user.username
-        return redirect(url_for("routes.map_page"))  
+        return redirect(url_for("routes.map_page"))  # Redirect to the map page
 
     return jsonify({"error": "Invalid username or password"}), 401
 
 @routes.route("/logout", methods=["GET"])
 def logout():
+    """
+    Log out the current user by clearing the session.
+    """
     session.clear()
-    return redirect(url_for("routes.homepage"))
+    return redirect(url_for("routes.homepage"))  # Redirect to the homepage
+
+
+# Fetch weather data
+@routes.route("/weather/<location>")
+def weather(location):
+    data = get_weather(location)
+    return jsonify(data)
+
+@routes.route("/population/<country>")
+def population(country):
+    data = get_population(country)
+    return jsonify(data)
+
+
+@routes.route("/pollution/place", methods=["GET"])
+def pollution_place():
+    """
+    Fetch air pollution data for a given place name.
+    Example: /pollution/place?name=New Delhi
+    """
+    place_name = request.args.get("name")
+    if not place_name:
+        return jsonify({"error": "Place name is required. Example: /pollution/place?name=New Delhi"}), 400
+
+    # Step 1: Get coordinates
+    coordinates = get_coordinates_openweather(place_name)
+    if "error" in coordinates:
+        return jsonify(coordinates), 404
+
+    # Step 2: Get air pollution data
+    pollution_data = get_air_pollution(coordinates["latitude"], coordinates["longitude"])
+
+    return jsonify({
+        "place": f"{coordinates['name']}, {coordinates['country']}",
+        "coordinates": {
+            "latitude": coordinates["latitude"],
+            "longitude": coordinates["longitude"]
+        },
+        "pollution": pollution_data
+    })
 
 @routes.route("/favorites", methods=["GET", "POST", "DELETE"])
 @login_required
@@ -98,7 +148,9 @@ def favorites():
     user_id = session.get("user_id")
 
     if request.method == "GET":
+        # Fetch all favorites for the logged-in user
         user_favorites = Favorite.query.filter_by(user_id=user_id).all()
+        
         return render_template("favorites.html", favorites=user_favorites)
 
     elif request.method == "POST":
@@ -119,18 +171,13 @@ def favorites():
         data = request.get_json()
         fav_id = data.get("id")
 
-        try:
-            fav = Favorite.query.filter_by(id=fav_id, user_id=user_id).first()
-            if fav:
-                db.session.delete(fav)
-                db.session.commit()
-                return jsonify({"message": "Favorite deleted successfully!"}), 200
+        fav = Favorite.query.filter_by(id=fav_id, user_id=user_id).first()
+        if fav:
+            db.session.delete(fav)
+            db.session.commit()
+            return jsonify({"message": "Favorite deleted successfully!"}), 200
 
-            return jsonify({"error": "Favorite not found."}), 404
-        except Exception as e:
-            print(f"Error while deleting favorite: {e}")
-            db.session.rollback()
-            return jsonify({"error": "Internal server error."}), 500
+        return jsonify({"error": "Favorite not found."}), 404
 
 @routes.route("/delete_favorite", methods=["POST"])
 @login_required
@@ -143,37 +190,3 @@ def delete_favorite():
         db.session.delete(fav)
         db.session.commit()
     return redirect(url_for("routes.favorites"))
-
-
-@routes.route("/details", methods=["GET"])
-@login_required
-def details():
-    lat = request.args.get("lat", type=float)
-    lon = request.args.get("lon", type=float)
-
-    if lat is None or lon is None:
-        return jsonify({"error": "Latitude and Longitude are required"}), 400
-
-    weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEYS['weather']}&units=metric"
-    weather_response = requests.get(weather_url).json()
-
-    if "sys" in weather_response:
-        country_code = weather_response["sys"].get("country", "Unknown")
-        country_name = get_country_name(country_code)
-        sunrise_time = format_timestamp(weather_response["sys"]["sunrise"])
-        sunset_time = format_timestamp(weather_response["sys"]["sunset"])
-    else:
-        country_name = "Unknown Country"
-        sunrise_time = "Unavailable"
-        sunset_time = "Unavailable"
-
-    population_data = get_population(country_code) if country_name != "Unknown Country" else {"error": "Population data unavailable"}
-
-    return render_template("details.html", 
-                           weather=weather_response, 
-                           lat=lat, 
-                           lon=lon, 
-                           country=country_name, 
-                           sunrise=sunrise_time, 
-                           sunset=sunset_time, 
-                           population=population_data)

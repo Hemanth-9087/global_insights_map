@@ -5,6 +5,10 @@ import os
 from .utils import fetch_valid_countries
 
 
+<<<<<<< HEAD
+=======
+# Initialize extensions
+>>>>>>> 20d3d82 (Merge remote and local)
 db = SQLAlchemy()
 migrate = Migrate()
 
