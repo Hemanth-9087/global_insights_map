@@ -3,6 +3,7 @@ from config import API_KEYS
 from functools import wraps
 from flask import session, jsonify
 import pycountry
+from requests import RequestException
 
 def login_required(func):
     @wraps(func)
@@ -17,15 +18,25 @@ VALID_COUNTRIES = []
 def fetch_valid_countries():
     global VALID_COUNTRIES
     url = "https://d6wn6bmjj722w.population.io/1.0/countries/"
-    response = requests.get(url)
-    
-    if response.status_code == 200:
-        data = response.json()
-        VALID_COUNTRIES = [country for country in data.get("countries", [])]
-    else:
-        print("Failed to fetch country list from the API")
+    if VALID_COUNTRIES:
+        return VALID_COUNTRIES
+
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            VALID_COUNTRIES = [country for country in data.get("countries", [])]
+        else:
+            print(f"Failed to fetch country list from the API. Status: {response.status_code}")
+    except RequestException as exc:
+        print(f"Error fetching country list: {exc}")
+
+    return VALID_COUNTRIES
 
 def validate_country_name(input_country):
+    if not VALID_COUNTRIES:
+        fetch_valid_countries()
+
     for country in VALID_COUNTRIES:
         if country.lower() == input_country.lower():
             return country  # Return the exact country name from the API
@@ -40,7 +51,10 @@ def get_population(country_code):
         return {"error": "No population data available."}
 
     url = f"https://d6wn6bmjj722w.population.io/1.0/population/{valid_country}/today-and-tomorrow/"
-    response = requests.get(url)
+    try:
+        response = requests.get(url, timeout=5)
+    except RequestException as exc:
+        return {"error": f"API error: {exc}"}
 
     if response.status_code == 200:
         data = response.json()
@@ -62,5 +76,4 @@ def get_country_name(country_code):
     except Exception as e:
         print(f"Error converting country code {country_code} to name: {e}")
         return "Unknown Country"
-
 

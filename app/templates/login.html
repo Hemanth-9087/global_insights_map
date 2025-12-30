@@ -2,6 +2,7 @@
 {% block content %}
 <div class="container mt-5">
     <h2>Login</h2>
+    <div id="loginAlert" class="alert d-none" role="alert"></div>
     <form id="loginForm">
         <div class="form-group">
             <label for="username">Username</label>
@@ -16,6 +17,14 @@
 </div>
 
 <script>
+    const loginAlert = document.getElementById('loginAlert');
+
+    function showLoginMessage(message, isError = false) {
+        loginAlert.textContent = message;
+        loginAlert.classList.remove('d-none', 'alert-success', 'alert-danger');
+        loginAlert.classList.add(isError ? 'alert-danger' : 'alert-success');
+    }
+
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const payload = {
@@ -30,10 +39,11 @@
         });
 
         if (response.redirected) {
+            showLoginMessage('Login successful! Redirecting...');
             window.location.href = response.url; // Handle redirect to /map
         } else {
             const result = await response.json();
-            alert(result.error || 'Login failed');
+            showLoginMessage(result.error || 'Login failed', true);
         }
     });
 </script>
